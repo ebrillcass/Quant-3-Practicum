@@ -1,0 +1,153 @@
+---
+title: "Homerism in Dunk Evaluations"
+subtitle: "GU4724 | Pre-analysis Plan"
+author: "Ethan Brill-Cass"
+date: "11/13/2026"
+output:
+  pdf_document:
+    highlight: tango
+fontsize: 11pt
+geometry: margin=1in
+indent: true
+header-includes:
+  - \setlength{\parskip}{6pt plus 2pt minus 1pt}
+---
+
+```{r setup, include=FALSE}
+# Code is shown but not run when knitting; set eval = TRUE once real data exist
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE, message = FALSE, warning = FALSE)
+```
+
+\noindent The purpose of this practicum experiment is to investigate hometeam bias, or homerism, in the context of basketball dunks. In most invocations, homerism is a silly critique launched back and forth by sports talk radio hosts as you would hear on a morning drive to work or school. However, it has long been decried in serious instances of alleged biased or manipulated refereeing. As sports betting proliferates and our reliance on betting markets deepens, the material consequences of homerism become even more salient. I link this to another issue facing modern basketball fans, biased in dunk contest scores, now a perennial gripe with all-star weekend among players and fans alike. The designed experiment is meant expected to discover whether there is homerism in simple dunk evaluations. The research hypothesis that I am testing is as follows:
+
+> **Hypothesis:** Dunk ratings are higher for dunks performed by a player on one's favorite team than dunks performed by a player from another team.
+
+# Empirical Strategy
+
+For this experiment, I collected 30 dunk evaluations ($N = 30$) from my research assistants, an assortment of fellow graduate students at Columbia University, classmates from college, and childhood friends. To be included, research assistants had to have a home or favorite team, and this question was used to discern viable assistants and prepare the treatment.
+
+In this experiment, the treatment involves viewing a dunk from a player on the hometeam of the research assistant. Though the ideal control condition would randomize among non-hometeam players, in an experiment with such a small N I chose to keep the control condition as a constant dunk to reduce variability in potential outcomes under control. The control condition is for Zion Williamson, because I am confident I will not encounter anyone who is a New Orleans Pelicans fan. The dunks are near identical across cases and were found using the PlayDB database and with play by play descriptions and visually to confirm each was a two handed alley-oop dunk, completely unguarded within a foot of the hoop and no added flair. 
+
+I will use complete random assignment to ensure a balanced design. I will perform the randomization in excel using $=RAND()$ and $=IF(D2<=MEDIAN(\$D\$2:\$D\$31),1,0)$. For both treatment and control conditions, I tell research assistants as they view the dunk to rate only the dunk itself and not the play leading up, though the play leading up is consistent between dunks.
+
+
+For the purposes of this study, the only pre-treatment covariate measured will be favorite team. This essentially precludes me from performing a test of the null hypothesis of random assignment by conducting a regression analysis of the assigned treatment on covariates and calculating the F-statistic. Though I considered taking a baseline measure on a dunk that is the same across assistant, this would rely on the assumption that dunk ratings are reasonable orderable and thus someone's rating on one is prognostic of thier rating on another, which is not necessarily true. Further, collecting a second estimate doubles the participation time for assistants and may clue them in to the purpose of the experiment.
+
+The outcome measured for each observation is a dunk rating from 1 to 10. This arbitrary scale matches that of the NBA All-Star Weekend Dunk Contest. Using these outcomes, I intend to estimate the ATE using the simple Difference-in-Means estimator. P values for hypothesis testing will be generated using randomization inference, using a one-tailed test as I only expect homerism to increase dunk scores. This study does not face any issues of attrition, compliance, or non-interference, or excludability. It is possible that, because this experiment is not double blind, my delivery will differ with assignment. However, using a standard one sentence script described above limits this potential violation.
+
+
+# R Code for Analysis
+
+```{r analysis}
+#-------------------------------------------------------------------------------
+# 1. Load required libraries
+
+library(estimatr)
+library(ggplot2)
+library(dplyr)
+library(broom)
+library(ri2)
+set.seed(12345)
+
+
+#-------------------------------------------------------------------------------
+# 2. Read the data file and do the data transformations according to the PAP
+
+# Simulated placeholder data
+N <- 30   
+m <- 15   
+
+# 1 = Assigned Treatment, 0 = Assigned Control
+data <- tibble(
+  treatment_assigned = sample(rep(c(1, 0), each = 15)),
+  outcome = sample(1:10, 30, replace = TRUE),
+  covariate = c("celtics", "knicks", "lakers", "trailblazers", "celtics", "knicks",
+                "celtics", "celtics", "knicks", "lakers", "trailblazers", "celtics",
+                "cavaliers", "celtics", "knicks", "lakers", "trailblazers",
+                "celtics", "knicks", "celtics", "celtics", "knicks",
+                "lakers", "trailblazers", "celtics", "cavaliers",
+                "celtics", "knicks", "lakers", "trailblazers"))
+
+
+#-------------------------------------------------------------------------------
+# 3. Compare outcome means to generate the table with descriptive results
+
+tab_1 <- data %>% 
+  select(treatment_assigned, outcome) %>% 
+  group_by(treatment_assigned) %>% 
+  summarise(across(everything(), list(mu = mean, sd = sd))) %>% 
+  mutate(outcome_se = outcome_sd / sqrt(m))
+
+tab_1 %>%
+  mutate(
+    treatment_assigned = ifelse(treatment_assigned == 1,
+                                "Treatment", "Control")) %>%
+  knitr::kable(col.names = c("Condition", "Mean", "SD", "SE"),
+               digits = 5,
+               caption = "Dunk ratings by experimental condition")
+
+# ATE from Difference-in-Means
+#print(sprintf("ATE: %.5f", tab_1$outcome_mu[2] - tab_1$outcome_mu[1]))
+
+#-------------------------------------------------------------------------------
+# 4. Conduct RI
+
+declaration <- declare_ra(N = N, m = m)
+
+ri2_out <- conduct_ri(outcome ~ treatment_assigned,
+                      declaration = declaration,
+                      assignment = "treatment_assigned",
+                      sharp_hypothesis = 0,
+                      sims = 1000,
+                      p = "upper",
+                      data = data)
+
+# Generate output
+#summary(ri2_out)
+#plot(ri2_out)
+
+# Interval under the sharp null equal to the observed estimate
+ate <- ri2_out$sims_df$est_obs[1]
+ri2_ci <- conduct_ri(outcome ~ treatment_assigned,
+                     declaration = declaration,
+                     assignment = "treatment_assigned",
+                     sharp_hypothesis = ate,
+                     sims = 1000,
+                     p = "upper",
+                     data = data)
+
+lower_quantile <- quantile(ri2_ci$sims_df$est_sim, 0.025)
+upper_quantile <- quantile(ri2_ci$sims_df$est_sim, 0.975)
+
+#print(paste0("95% Confidence Interval: ",
+             #paste(paste(lower_quantile, ", "), upper_quantile)))
+
+
+#-------------------------------------------------------------------------------
+# 7. A graphical depiction of experimental findings in style of Coppock (2021)
+
+summary_df <- tab_1 %>%
+  mutate(outcome   = outcome_mu,
+         conf.low  = outcome_mu - qt(0.975, m - 1) * outcome_se,
+         conf.high = outcome_mu + qt(0.975, m - 1) * outcome_se)
+
+plot <-
+  ggplot(summary_df, aes(factor(treatment_assigned), outcome)) +
+  geom_point(
+    data = data,
+    position = position_jitter(width = 0.15, height = 0.1),
+    alpha = 0.3
+  ) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0) +
+  theme_bw() +
+  scale_y_continuous(breaks = seq(0, 10, length.out = 5)) +
+  scale_x_discrete(
+    labels = c('Control Condition (Zion Williamson)',
+               'Hometeam Condition')) +
+  theme(axis.title.x = element_blank()) +
+  ylab("Outcome Variable: Dunk Rating") +
+  theme(plot.title = element_text(hjust = .5))
+
+#plot
+```

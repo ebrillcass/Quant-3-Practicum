@@ -1,0 +1,394 @@
+---
+title: "Homerism in Dunk Evaluations"
+subtitle: "POLSGU4724 | Practicum Experiment"
+author: "Ethan Brill-Cass"
+date: "`r format(Sys.Date(), '%Y-%m-%d')`"
+thanks: "Preregistered at [OSF https://osf.io/6b849](https://osf.io/6b849)."
+output:
+  pdf_document:
+    highlight: tango
+fontsize: 11pt
+geometry: margin=1in
+indent: true
+urlcolor: blue
+header-includes:
+  - \setlength{\parskip}{6pt plus 2pt minus 1pt}
+  - \usepackage{float}
+  - \usepackage{epigraph}
+  - \setlength{\epigraphwidth}{0.6\textwidth}
+  - \renewcommand{\epigraphflush}{center}
+---
+
+```{r setup, include=FALSE}
+# Code is hidden in the body and reprinted in Appendix A2
+knitr::opts_chunk$set(echo = FALSE, eval = TRUE, message = FALSE, warning = FALSE,
+                      fig.pos = "H", fig.align = "center")
+```
+```{r load-data}
+#-------------------------------------------------------------------------------
+# 1. Load required libraries
+
+library(estimatr)
+library(ggplot2)
+library(dplyr)
+library(broom)
+library(ri2)
+set.seed(12345)
+
+
+#-------------------------------------------------------------------------------
+# 2. Read the data file
+
+# Columns in the file: d = treatment (1 = hometeam dunk, 0 = Zion Williamson), y = rating (1-10)
+data <- read.csv("Dunk_Data.csv") %>%
+  rename(treatment_assigned = d, outcome = y)
+
+N <- nrow(data)
+m <- sum(data$treatment_assigned)
+```
+\vspace{-2em}
+\epigraph{\textit{I'M THE LAST ONE WHO'S A HOMER, DON'T YOU EVER CALL ME A HOMER. WHO THE HELL DO YOU THINK HAS BEEN SAYING THE TRUTH SINCE 1973 ON ATLANTA RADIO? WHO? Boy that ticks me off...}}{--- Beau Bock, \textit{790 The Zone in Atlanta - August 4, 2011}}
+
+\noindent Irrational hometeam bias in evaluations of sports, or homerism, has long been a sore subject for sports talk radio hosts. Tuning to the sports talk radio stations for a morning drive to work, one will often hear the insult of "homer" slung back and forth as a way of accusing someone of providing an impartial and unrealistically favorable assessment of a player, team, or manager's performance. As highlighted in the quote from the late Beau Bock, Atlanta sports talk radio host for over four decades across more than five stations, the insult cuts deep if your identity and livelihood are predicated on impartiality and sports analysis.
+
+Even more serious than a radio host's reputation, homerism has also been the subject of numerous controversies of alleged biased or manipulated refereeing (Garicano, Palacios-Huerta, and Prendergast 2005; Zitzewitz 2006; Dohmen 2008; Pettersson-Lidbom and Priks 2010; Price, Remer, and Stone 2012; Pope and Pope 2015; Sandberg 2018; Krumer, Otto, and Pawlowski 2022; Pelechrinis 2023). Now that sports betting has become common place and markets are increasingly used in formal coverage, the material consequences of homerism in both referees and casual observers become even more salient (Hastorf and Cantril 1954; Forrest and Simmons 2008; Feddersen, Humphreys, and Soebbing 2018).
+
+This practicum experiment sets out to investigate the impact of homerism in evaluations of sporting performances. To narrow the considerations to a reasonable scope, I consider a specific play in a specific sport that is rife with accusations of biased evaluation: NBA dunks. Thus, the designed experiment is expected to uncover whether homerism exists in simple dunk evaluations. The research hypothesis that I am testing is as follows:
+
+> **Hypothesis:** Dunk ratings are higher for dunks performed by a player on one's favorite team than for dunks performed by a player from another team.
+
+# Empirical Strategy
+
+For this experiment, I collected `r N` dunk evaluations ($N = `r N`$) from research assistants: fellow graduate students at Columbia University, classmates from college, and childhood friends. To be included, research assistants had to have a favorite NBA team, treating favorite and hometeam as equivalent. In addition to screening for eligible assistants, this question allowed me to prepare each assistant's potential treatment stimuli.
+
+In this experiment, the treatment involves viewing a dunk by a player on the research assistant's favorite team. Although the ideal control condition would randomize among non-hometeam players, with such a small $N$ I kept the control condition as a single constant dunk to reduce variability in potential outcomes under control. Thus, the control dunk is by Zion Williamson of the New Orleans Pelicans, a team I anticipated no assistants would support. As expected, no one would admit to being a New Orleans Pelicans fan, though I cannot entirely rule out the possibility that secret Pelicans fans refused to self identify out of sheer embarrassment.
+
+All dunks were located using the PlayDB database (NBAPlayDB, n.d.), then checked against play-by-play descriptions and visually to confirm that each was a two-handed alley-oop dunk, completely unguarded, within a foot of the hoop, and with no added flair. Table A1 in the Appendix lists the dunk shown for each team.
+
+For the purposes of this study, the only pre-treatment covariate measured is favorite team and it is not used in analysis. I considered collecting other covariates, including a common dunk baseline or hours basketball consumed. However, I decided against collecting either as a second rating would have doubled participation time and because I worried framing the experiment with their self assessment of hours watched may increase doubt in lower viewers or increase confidence in those who watch most where I was intending to get a snap judgement. I also worried either might reveal the purpose of the experiment.
+
+I used complete random assignment to ensure a balanced design, with `r m` assistants assigned to the hometeam dunk and `r N - m` assigned to the control dunk. The randomization did not include blocking or  clustering. It was performed in Excel using the two step process of `=RAND()` to generate a number between 0 and 1 followed by `=IF(D2<=MEDIAN($D$2:$D$31),1,0)` which assigns treatment to the lower half of the randomly assigned values. Research assistants were told just before viewing the dunk:
+
+> "Rate this dunk on a scale of 1 to 10. Please rate just the dunk, , not the play leading up to it"
+
+\noindent As the quote makes clear, the outcome is a rating on a scale from 1 to 10. This matches the possible scoring scale of the real NBA All Star Weekend Dunk Competition. Further, I did not specify that only whole numbers could be used, but only one research assistant provided an answer with a decimal place (8.7).
+
+# Core Assumptions
+
+**Random Assignment.** Random assignment was conducted in Excel across the full pool of `r N` research assistants, with a known probability of assignment to either condition of `r round(m / N, 2)`. I am unable to perform a randomization check or balance test without covariates, and thus I rely on excel to have faithfully randomized assignment. The assignment did lead to a balanced design as expected.
+
+**Non-Interference.** Each assistant viewed and rated their dunk individually. Intereference could have occurred if assistants had discussed the study with one another before participating or seen each others dunks before viewing their own assigned dunks. However, such spillovers are unlikely as everyone shown the dunk had not heard of the experiment before signing on as a research assistant.
+
+**Excludability.** Because the delivery, wording, and context of each condition was consistent, the treatment assignment should affect ratings only through the dunk that was viewed. However, this experiment is not double blind so it is possible that the tone of my delivery or tone in asking what their favorite team is somehow altered the ratings of the dunks. I also clarify that the treatment inherently contains a bundle of hometeam or not as well as the specific player being featured. This is necessary to elicit real hometeam bias, but nevertheless must be stated. Ideally with a larger n this may be remedied by randomizing also the player among several on any given team to see if individual players are tainting the assessment of homerism.
+
+**Non-compliance.** All research assistants watched the dunk, so no non-compliance occurred.
+
+**Attrition.** All reserach assistant provided a rating, so no attrition occurred.
+
+# Results
+
+```{r descriptives}
+#-------------------------------------------------------------------------------
+# 3. Compare outcome means to generate the table with descriptive results
+
+tab_1 <- data %>%
+  select(treatment_assigned, outcome) %>%
+  group_by(treatment_assigned) %>%
+  summarise(outcome_mu = mean(outcome),
+            outcome_sd = sd(outcome),
+            n = n()) %>%
+  mutate(outcome_se = outcome_sd / sqrt(n))
+
+mu_c <- tab_1$outcome_mu[tab_1$treatment_assigned == 0]
+mu_t <- tab_1$outcome_mu[tab_1$treatment_assigned == 1]
+se_c <- tab_1$outcome_se[tab_1$treatment_assigned == 0]
+se_t <- tab_1$outcome_se[tab_1$treatment_assigned == 1]
+dim_ate <- mu_t - mu_c
+```
+
+Table 1 displays the mean dunk ratings in the control and treatment (hometeam) conditions. The mean rating among those assigned to treatment is `r sprintf("%.2f", mu_t)` (SE = `r sprintf("%.2f", se_t)`), while the mean rating among those assigned to control is `r sprintf("%.2f", mu_c)` (SE = `r sprintf("%.2f", se_c)`). The difference of `r sprintf("%.2f", dim_ate)` points is in the direction that was predicted, lending some minor support to the hypothesis.
+
+```{r table-1}
+fmt <- function(x) sprintf("%.2f", x)
+
+table_1 <- data.frame(
+  row = c("Mean Dunk Rating", "", "N"),
+  control = c(fmt(mu_c), paste0("(", fmt(se_c), ")"), N - m),
+  treatment = c(fmt(mu_t), paste0("(", fmt(se_t), ")"), m)
+)
+
+knitr::kable(table_1,
+             col.names = c("", "Control", "Hometeam Dunk"),
+             align = "lcc", booktabs = TRUE,
+             caption = "Mean Dunk Rating across Experimental Conditions")
+```
+
+\begin{center}\footnotesize Note: Standard errors are reported in parentheses.\end{center}
+
+```{r regressions}
+#-------------------------------------------------------------------------------
+# 4. Difference-in-means (pre-registered)
+
+m2.1 <- lm_robust(outcome ~ treatment_assigned, data = data)            # HC2 = Neyman SE
+
+get_row <- function(fit) {
+  t <- tidy(fit) %>% filter(term == "treatment_assigned")
+  p_upper <- pt(t$statistic, df = t$df, lower.tail = FALSE)            # one-tailed
+  stars <- ifelse(p_upper < 0.01, "***", ifelse(p_upper < 0.05, "**",
+           ifelse(p_upper < 0.1, "*", "")))
+  c(paste0(sprintf("%.3f", t$estimate), stars),
+    paste0("(", sprintf("%.3f", t$std.error), ")"),
+    fit$nobs,
+    sprintf("%.3f", fit$adj.r.squared))
+}
+
+table_2 <- data.frame(
+  row = c("Treatment", "", "Observations", "Adjusted R$^2$"),
+  m1 = get_row(m2.1)
+)
+
+ate_1 <- coef(m2.1)["treatment_assigned"]
+se_1  <- m2.1$std.error["treatment_assigned"]
+p_1   <- pt(m2.1$statistic["treatment_assigned"], df = m2.1$df["treatment_assigned"],
+            lower.tail = FALSE)
+```
+
+Table 2 summarizes the main result referenced above: the pre-registered difference-in-means estimator, estimated here equivalently as a regression of the dunk rating on treatment assignment with robust standard errors. The estimated ATE is `r sprintf("%.2f", ate_1)` rating points (SE = `r sprintf("%.2f", se_1)` as stated above; one-tailed $p$ = `r sprintf("%.3f", p_1)`). This estimate is not statistically significant at any conventional level.
+
+```{r table-2}
+knitr::kable(table_2, col.names = c("", "(1)"),
+             align = "lc", booktabs = TRUE, escape = FALSE,
+             caption = "OLS Estimates of the Effect of Viewing a Hometeam Dunk")
+```
+
+\begin{center}\footnotesize Note: Treatment is coded 1 if the assistant viewed a dunk by a player on their favorite team and 0 if they viewed the Zion Williamson dunk. HC2 robust standard errors in parentheses. One-tailed tests: $^{*}p<0.1$; $^{**}p<0.05$; $^{***}p<0.01$.\end{center}
+
+```{r ri}
+#-------------------------------------------------------------------------------
+# 5. Conduct RI (one-tailed test of the sharp null of no effect)
+
+declaration <- declare_ra(N = N, m = m)
+
+ri2_out <- conduct_ri(outcome ~ treatment_assigned,
+                      declaration = declaration,
+                      assignment = "treatment_assigned",
+                      sharp_hypothesis = 0,
+                      sims = 1000,
+                      p = "upper",
+                      data = data)
+
+ate   <- ri2_out$sims_df$est_obs[1]
+ri_p  <- mean(ri2_out$sims_df$est_sim >= ate)
+
+# Interval: re-randomize under the sharp hypothesis that every effect equals the ATE
+ri2_ci <- conduct_ri(outcome ~ treatment_assigned,
+                     declaration = declaration,
+                     assignment = "treatment_assigned",
+                     sharp_hypothesis = ate,
+                     sims = 1000,
+                     data = data)
+
+lower_quantile <- quantile(ri2_ci$sims_df$est_sim, 0.025)
+upper_quantile <- quantile(ri2_ci$sims_df$est_sim, 0.975)
+```
+
+Next, I conduct randomization inference. As pre-registered, I use a one-tailed test of the sharp null hypothesis that the treatment effect for each assistant is exactly zero. As was the case above, I use a one-tailed test because my hypothesis is directional and I am only intending to test for higher scores for hometeam dunk evaluations not some unbelievable hometeam penalty. Figure 1 shows the distribution of `r length(ri2_out$sims_df$est_sim)` simulated estimates.
+
+```{r fig-ri, fig.cap = "Randomization Inference", fig.width = 6, fig.height = 3.5}
+plot(ri2_out) + theme_bw() + labs(x = "Simulated Estimates", y = NULL, title = NULL)
+```
+
+For the estimated ATE of `r sprintf("%.2f", ate)`, randomization inference yields a one-tailed $p$-value of `r sprintf("%.3f", ri_p)`, so I `r if (ri_p < 0.05) "reject" else "fail to reject"` the sharp null hypothesis of no effect at the 5% level, or truly any level. The p-value here indicating that across all simulated random assignments under the sharp null hypothesis the probability of an estimated effect as big or bigger is 45.6%, barely better than a coin flip. The 95% confidence interval, obtained by simulating the sampling distribution under the hypothesis that every effect equals the estimated ATE of 0.10, is (`r sprintf("%.2f", lower_quantile)`; `r sprintf("%.2f", upper_quantile)`), and it very much includes 0. I conclude that this experiment does not provide evidence for the hypothesis that dunk ratings are higher for dunks performed by a player on one's favorite team than for dunks performed by a player from another team. Further, the effect estimated here is statistically indistinguishable from zero at conventional levels of significance.
+
+I wrap up the analysis section by presenting the experimental results in the style of Coppock (2021). Figure 2 shows each assistant's rating together with the mean of each group and a 95% confidence interval expressing the uncertainty for each group mean.
+
+```{r fig-coppock, fig.cap = "Visualization of Experimental Findings", fig.width = 5, fig.height = 4}
+#-------------------------------------------------------------------------------
+# 6. A graphical depiction of experimental findings in style of Coppock (2021)
+
+summary_df <- tab_1 %>%
+  mutate(outcome   = outcome_mu,
+         conf.low  = outcome_mu - qt(0.975, n - 1) * outcome_se,
+         conf.high = outcome_mu + qt(0.975, n - 1) * outcome_se)
+
+ggplot(summary_df, aes(factor(treatment_assigned), outcome)) +
+  geom_point(data = data,
+             position = position_jitter(width = 0.15, height = 0.1),
+             alpha = 0.3) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0) +
+  theme_bw() +
+  scale_y_continuous(breaks = 1:10, limits = c(0.5, 10.5)) +
+  scale_x_discrete(labels = c("Control Condition (Zion Williamson)",
+                              "Hometeam Condition")) +
+  theme(axis.title.x = element_blank()) +
+  ylab("Outcome Variable: Dunk Rating")
+```
+
+# Conclusion
+
+While anecdotal incidents of homerism may be cause for laughter and concern, this experiment does not provide additional evidence for a common bias. In this experiment, I randomly assigned research assistants to rate either a dunk by a player on their hometeam or a near identical dunk sharing all major characteristics but performed by Zion Williamson. Though the analysis here estimates a difference of 0.10 points in the expected direction, I do not find this to be statistically significant, and thus I cannot reject the sharp null of no effect. However, this outcome should not be taken to stand in contrast to prior literature observing hometeam bias in other settings, because this experiment was limited in key ways. First, with $N = `r N`$, the study is powered to detect only large effects. This may be okay if you expect hometeam bias to cause large disparities in dunk ratings, but that was not observed here. Second, individual characteristics of the players being shown matter. The players included (Zion Williamson, Jaylen Brown, Lebron James, etc.) all have individual reputations and may contribute their own bias to evaluations. Future work could randomize the treatment and control dunks across a bigger pool of near identical dunks.
+
+# References
+
+\noindent Coppock, Alexander. 2021. "Visualize as You Randomize." In *Advances in Experimental Political Science*, edited by James N. Druckman and Donald P. Green, 320--37. Cambridge University Press.
+
+\noindent Dohmen, Thomas J. 2008. "The Influence of Social Forces: Evidence from the Behavior of Football Referees." *Economic Inquiry* 46 (3): 411--24.
+
+\noindent Feddersen, Arne, Brad R. Humphreys, and Brian P. Soebbing. 2018. "Sentiment Bias in National Basketball Association Betting." *Journal of Sports Economics* 19 (4): 455--72.
+
+\noindent Forrest, David, and Robert Simmons. 2008. "Sentiment in the Betting Market on Spanish Football." *Applied Economics* 40 (1): 119--26.
+
+\noindent Garicano, Luis, Ignacio Palacios-Huerta, and Canice Prendergast. 2005. "Favoritism Under Social Pressure." *Review of Economics and Statistics* 87 (2): 208--16.
+
+\noindent Gerber, Alan S., and Donald P. Green. 2012. *Field Experiments: Design, Analysis, and Interpretation*. New York: W. W. Norton.
+
+\noindent Hastorf, Albert H., and Hadley Cantril. 1954. "They Saw a Game: A Case Study." *Journal of Abnormal and Social Psychology* 49 (1): 129--34.
+
+\noindent Krumer, Alex, Felix Otto, and Tim Pawlowski. 2022. "Nationalistic Bias among International Experts: Evidence from Professional Ski Jumping." *Scandinavian Journal of Economics* 124 (1): 278--300.
+
+\noindent Pelechrinis, Konstantinos. 2023. "Quantifying Implicit Biases in Refereeing Using NBA Referees as a Testbed." *Scientific Reports* 13. https://doi.org/10.1038/s41598-023-31799-y.
+
+\noindent Pettersson-Lidbom, Per, and Mikael Priks. 2010. "Behavior under Social Pressure: Empty Italian Stadiums and Referee Bias." *Economics Letters* 108 (2): 212--14.
+
+\noindent Pope, Bryson R., and Nolan G. Pope. 2015. "Own-Nationality Bias: Evidence from UEFA Champions League Football Referees." *Economic Inquiry* 53 (2): 1292--1304.
+
+\noindent Price, Joseph, Marc Remer, and Daniel F. Stone. 2012. "Subperfect Game: Profitable Biases of NBA Referees." *Journal of Economics \& Management Strategy* 21 (1): 271--300.
+
+\noindent Sandberg, Anna. 2018. "Competing Identities: A Field Study of In-Group Bias Among Professional Evaluators." *Economic Journal* 128 (613): 2131--59.
+
+\noindent Zitzewitz, Eric. 2006. "Nationalism in Winter Sports Judging and Its Lessons for Organizational Decision Making." *Journal of Economics \& Management Strategy* 15 (1): 67--99.
+
+\newpage
+
+# Appendix
+
+## A1. Dunks Shown in Each Condition
+
+```{r table-a1}
+# Fill in one row per team whose dunk was shown
+table_a1 <- data.frame(
+  Team   = c("Control (Pelicans)", "Celtics", "Knicks", "Heat", "Lakers"),
+  Player = c("Zion Williamson", "Jaylen Brown", "Mikal Bridges", "Kel'el Ware", "LeBron James"),
+  Game   = c("Q1 9:54 · 6–4 · Pelicans at Timberwolves · Feb 6, 2026", "Q2 1:09 · 52–63 · Hawks at Celtics · Nov 12, 2024", "Q2 3:33 · 54–54 · 76ers at Knicks · May 6, 2026", "Q4 9:02 · 90–108 · Nets at Heat · Mar 5, 2026", "Q1 6:35 · 7–16 · Lakers at Nuggets · Mar 5, 2026")
+)
+knitr::kable(table_a1, booktabs = TRUE, caption = "Dunk Stimuli by Team")
+```
+
+## A2. R Code
+
+```{r, echo = TRUE, eval = FALSE}
+
+#-------------------------------------------------------------------------------
+# 1. Load required libraries
+
+library(estimatr)
+library(ggplot2)
+library(dplyr)
+library(broom)
+library(ri2)
+set.seed(12345)
+
+
+#-------------------------------------------------------------------------------
+# 2. Read the data file and do the data transformations according to the PAP
+
+# Simulated placeholder data
+N <- 30   
+m <- 15   
+
+# 1 = Assigned Treatment, 0 = Assigned Control
+data <- tibble(
+  treatment_assigned = sample(rep(c(1, 0), each = 15)),
+  outcome = sample(1:10, 30, replace = TRUE),
+  covariate = c("celtics", "knicks", "lakers", "trailblazers", "celtics", "knicks",
+                "celtics", "celtics", "knicks", "lakers", "trailblazers", "celtics",
+                "cavaliers", "celtics", "knicks", "lakers", "trailblazers",
+                "celtics", "knicks", "celtics", "celtics", "knicks",
+                "lakers", "trailblazers", "celtics", "cavaliers",
+                "celtics", "knicks", "lakers", "trailblazers"))
+
+
+#-------------------------------------------------------------------------------
+# 3. Compare outcome means to generate the table with descriptive results
+
+tab_1 <- data %>% 
+  select(treatment_assigned, outcome) %>% 
+  group_by(treatment_assigned) %>% 
+  summarise(across(everything(), list(mu = mean, sd = sd))) %>% 
+  mutate(outcome_se = outcome_sd / sqrt(m))
+
+tab_1 %>%
+  mutate(
+    treatment_assigned = ifelse(treatment_assigned == 1,
+                                "Treatment", "Control")) %>%
+  knitr::kable(col.names = c("Condition", "Mean", "SD", "SE"),
+               digits = 5,
+               caption = "Dunk ratings by experimental condition")
+
+# ATE from Difference-in-Means
+#print(sprintf("ATE: %.5f", tab_1$outcome_mu[2] - tab_1$outcome_mu[1]))
+
+#-------------------------------------------------------------------------------
+# 4. Conduct RI
+
+declaration <- declare_ra(N = N, m = m)
+
+ri2_out <- conduct_ri(outcome ~ treatment_assigned,
+                      declaration = declaration,
+                      assignment = "treatment_assigned",
+                      sharp_hypothesis = 0,
+                      sims = 1000,
+                      p = "upper",
+                      data = data)
+
+# Generate output
+#summary(ri2_out)
+#plot(ri2_out)
+
+# Interval under the sharp null equal to the observed estimate
+ate <- ri2_out$sims_df$est_obs[1]
+ri2_ci <- conduct_ri(outcome ~ treatment_assigned,
+                     declaration = declaration,
+                     assignment = "treatment_assigned",
+                     sharp_hypothesis = ate,
+                     sims = 1000,
+                     p = "upper",
+                     data = data)
+
+lower_quantile <- quantile(ri2_ci$sims_df$est_sim, 0.025)
+upper_quantile <- quantile(ri2_ci$sims_df$est_sim, 0.975)
+
+#print(paste0("95% Confidence Interval: ",
+             #paste(paste(lower_quantile, ", "), upper_quantile)))
+
+
+#-------------------------------------------------------------------------------
+# 7. A graphical depiction of experimental findings in style of Coppock (2021)
+
+summary_df <- tab_1 %>%
+  mutate(outcome   = outcome_mu,
+         conf.low  = outcome_mu - qt(0.975, m - 1) * outcome_se,
+         conf.high = outcome_mu + qt(0.975, m - 1) * outcome_se)
+
+plot <-
+  ggplot(summary_df, aes(factor(treatment_assigned), outcome)) +
+  geom_point(
+    data = data,
+    position = position_jitter(width = 0.15, height = 0.1),
+    alpha = 0.3
+  ) +
+  geom_point(size = 3) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0) +
+  theme_bw() +
+  scale_y_continuous(breaks = seq(0, 10, length.out = 5)) +
+  scale_x_discrete(
+    labels = c('Control Condition',
+               'Hometeam Condition')) +
+  theme(axis.title.x = element_blank()) +
+  ylab("Outcome Variable: Dunk Rating") +
+  theme(plot.title = element_text(hjust = .5))
+
+#plot
+
+```
